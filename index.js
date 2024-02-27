@@ -71,16 +71,18 @@ async function predictSentiment(text) {
 
     return x;
 }
-
+//1. yol
 //const pip = await createPipeline();
-//const prediction =pip("Seni çok seviyorumm.bu gün seni çok özledim");
+//const prediction =pip("Bu gün hava çok güzel");
 //console.log(prediction);
 
-predictSentiment("Seni çok seviyorumm.bu gün seni çok özledim");
+//2. yol
+predictSentiment("Bu gün hava çok güzel");
 
+//3. yol
 //const bertModel = new BertModel();
 //await bertModel.setup();
-//const preprocessedInput=await bertModel.preprocess("Seni çok seviyorumm");
+//const preprocessedInput=await bertModel.preprocess("Bu gün hava çok güzel");
 //const predictions=await bertModel.predict(preprocessedInput);
 //console.log(predictions);
 
