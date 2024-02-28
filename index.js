@@ -17,7 +17,7 @@ async function createPipeline() {
 
     return sentimentPipeline;
 }
-//const pip=createPipeline();
+
 
 async function loadModel() {
     
@@ -86,6 +86,7 @@ async function predictSentiment(text) {
 //const predictions=await bertModel.predict(preprocessedInput);
 //console.log(predictions);
 
+;
 app.use(express.json());
 app.use(cors());
 

@@ -6,7 +6,7 @@ router.get('/users', (req, res, next) => {
 });
 
 router.post('/model', (req, res, next) => {
-    res.send(req.body);
+    res.send(req.body);//Predict metodundan döndürülen değer gönderilecek
     
 });
 
