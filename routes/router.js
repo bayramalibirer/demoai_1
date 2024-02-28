@@ -5,4 +5,9 @@ router.get('/users', (req, res, next) => {
     res.send('This is the secret content. Only logged in users can see that!');
 });
 
+router.post('/model', (req, res, next) => {
+    res.send(req.body);
+    
+});
+
 export default router;

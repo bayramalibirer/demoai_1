@@ -77,7 +77,7 @@ async function predictSentiment(text) {
 //console.log(prediction);
 
 //2. yol
-predictSentiment("Bu gün hava çok güzel");
+//predictSentiment("Bu gün hava çok güzel");
 
 //3. yol
 //const bertModel = new BertModel();
