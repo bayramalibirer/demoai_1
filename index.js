@@ -4,9 +4,9 @@ import cors from 'cors';
 const PORT = process.env.PORT || 3000;
 import * as tf from'@tensorflow/tfjs-node';
 import fs from 'fs';
-import { pipeline,BertTokenizer } from '@xenova/transformers';
+import { pipeline,BertTokenizer,AutoTokenizer,AutoModel } from '@xenova/transformers';
 import  router from './routes/router.js';
-import BertModel from './bert.js';
+//import BertModel from './bert/model.js';
 
 async function createPipeline() {
     const modelPath = await loadModel();
@@ -48,7 +48,6 @@ function loadTokenizer() {
     const vocab = rawVocab.split("\n");
 
     const tokenizer = new BertTokenizer(tokenizerData, specialTokensMap, tokenizerConfig, vocab);
-
     //console.log(tokenizer);
     console.log("tokenizer yüklendi");
     return tokenizer;
@@ -60,7 +59,7 @@ async function predictSentiment(text) {
     const model = await loadModel();
 
     var encodedText = token.encode(text);
-    var input_ids = tf.tensor2d([encodedText], [1, encodedText.length], 'int32');
+    var input_ids = tf.tensor2d([encodedText], [1, encodedText.length], 'int32');//[1, encodedText.length] yerlerini değiştirerek kulllanmayı deneyin
     var token_type_ids = tf.tensor2d([Array(input_ids.shape[1]).fill(0)], [1, input_ids.shape[1]], 'int32');
     var attention_mask = tf.tensor2d([Array(input_ids.shape[1]).fill(1)], [1, input_ids.shape[1]], 'int32');
 
@@ -86,7 +85,30 @@ async function predictSentiment(text) {
 //const predictions=await bertModel.predict(preprocessedInput);
 //console.log(predictions);
 
-;
+async function txt_to_json(){
+    fs.readFile('./tokenizer/vocab.txt', 'utf8', (err, data) => {
+        if (err) {
+            console.error('Dosya okunurken bir hata oluştu:', err);
+            return;
+        }
+    
+        // Metni boşluklarla veya satır satır ayırarak bir diziye depolayın
+        const vocabArray = data.split(/\s+/).filter(word => word.trim() !== '');
+    
+        // Diziyi bir JSON nesnesine dönüştürün
+        const vocabJson = JSON.stringify(vocabArray, null, 4);
+    
+        // JSON dosyasına yazın
+        fs.writeFile('./bert/vocab.json', vocabJson, 'utf8', (err) => {
+            if (err) {
+                console.error('JSON dosyasına yazılırken bir hata oluştu:', err);
+                return;
+            }
+            console.log('JSON dosyası başarıyla oluşturuldu: vocab.json');
+        });
+    });
+}
+
 app.use(express.json());
 app.use(cors());
 

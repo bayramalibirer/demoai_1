@@ -1,12 +1,10 @@
-import * as tf from "@tensorflow/tfjs-node";
-import fs from 'fs';
-import { BertTokenizer} from "@xenova/transformers";
+import * as tf from "@tensorflow/tfjs-node"
+import loadTokenizer  from "./tokenizer.js";
 
-
-export default class BertModel {
+class BertModel {
     constructor(inputSize) {
         this.inputSize = inputSize;
-        
+        this.url = `file://../models/model.json`;
     }
 
     async setup() {
@@ -34,13 +32,12 @@ export default class BertModel {
         return processedInputs[0];
     }
 
+    // Preprocess dataset
     batchPreprocess(inputExamples, inputLabels) {
-        const validInputExamples = inputExamples.filter(input => typeof input === 'string' && input !== undefined);
-    
-        const tokenizedInputs = validInputExamples.map((input) =>
-            this.tokenizer.encode(input, this.inputSize)
+        const tokenizedInputs = inputExamples.map((input) =>
+            this.tokenizer.encodeText(input, this.inputSize)
         );
-    
+
         const bertInputs = tokenizedInputs.map(
             (tokenized, index) => {
                 const bertInput = {
@@ -52,7 +49,7 @@ export default class BertModel {
                 return bertInput;
             }
         );
-    
+
         return bertInputs;
     }
 
@@ -103,18 +100,10 @@ export default class BertModel {
         return predictions;
     }
 
+    // Get raw results from bert layer
     async bertLayerInference(inputs) {
         const batchSize = inputs.length;
-        const inputIds = inputs.map((value) => {
-            if (value && value.inputIds) {
-                console.log(value.inputIds);
-                return value.inputIds;
-            } else {
-                console.log(value.inputIds);
-
-                throw new Error('Invalid input: missing inputIds');
-            }
-        });
+        const inputIds = inputs.map((value) => value.inputIds);
         const segmentIds = inputs.map((value) => value.segmentIds);
         const inputMask = inputs.map((value) => value.inputMask);
 
@@ -146,6 +135,7 @@ export default class BertModel {
         return bertOutput;
     }
 
+    // Add the classification layer
     createClassificationLayer() {
         const model = tf.sequential({
             layers: [
@@ -166,40 +156,39 @@ export default class BertModel {
         return model;
     }
 
+    // Load converted bert model
     async loadBertModel() {
-        const modelPath = 'models/tfjs_model/model.json'; // Modelin dosya yolunu doğru bir şekilde belirtin
-        this.bertModel = await tf.loadGraphModel(tf.io.fileSystem(modelPath));
-        //console.log(model);
-        console.log("model yüklendi");
-
-
+        try {
+            console.log("Loading model...");
+            this.bertModel = await tf.loadGraphModel(this.url);
+            console.log("Model loaded");
+        } catch (e) {
+            console.error('Model yüklenirken hata: ', e);
+            throw e;
+        }
     }
 
+    // Load tokenizer for bert input
     async loadTokenizer() {
-        console.log("Loading tokenizer...");
-        const tokenizerPath = "./tokenizer/tokenizer.json";
-        const specialTokensMapPath = "./tokenizer/special_tokens_map.json";
-        const tokenizerConfigPath = "./tokenizer/tokenizer_config.json";
-        const vocabPath = "./tokenizer/vocab.txt";
-
-        const rawTokenizerData = fs.readFileSync(tokenizerPath);
-        const tokenizerData = JSON.parse(rawTokenizerData);
-
-        const rawSpecialTokensMap = fs.readFileSync(specialTokensMapPath);
-        const specialTokensMap = JSON.parse(rawSpecialTokensMap);
-
-        const rawTokenizerConfig = fs.readFileSync(tokenizerConfigPath);
-        const tokenizerConfig = JSON.parse(rawTokenizerConfig);
-
-        const rawVocab = fs.readFileSync(vocabPath, "utf-8");
-        const vocab = rawVocab.split("\n");
-
-        this.tokenizer = new BertTokenizer(tokenizerData, specialTokensMap, tokenizerConfig, vocab);
-
-        //console.log(tokenizer);
-        console.log("tokenizer yüklendi");
-       
+        try {
+            console.log("Loading tokenizer...");
+            this.tokenizer = await loadTokenizer();
+            console.log("Tokenizer loaded");
+        } catch (e) {
+            console.error('Tokenizer yüklenirken hata: ', e);
+            throw e;
+        }
     }
 }
 
 
+class BertInput {
+    constructor(inputIds, inputMask, segmentIds, labels) {
+        this.inputIds = inputIds;
+        this.inputMask = inputMask;
+        this.segmentIds = segmentIds;
+        this.labels = labels;
+    }
+}
+
+export { BertModel, BertInput };
