@@ -1,12 +1,17 @@
 import * as tf from "@tensorflow/tfjs-node"
-import loadTokenizer  from "./tokenizer.js";
+import fs from 'fs';
+import { BertTokenizer} from '@xenova/transformers';
+//import {loadTokenizer}  from "./tokenizer.js";
+
+
 
 class BertModel {
     constructor(inputSize) {
         this.inputSize = inputSize;
-        this.url = `file://../models/model.json`;
+        this.url = `file://./models/tfjs_model/model.json`;
+        
     }
-
+    
     async setup() {
         const setupCalls = [];
 
@@ -34,32 +39,27 @@ class BertModel {
 
     // Preprocess dataset
     batchPreprocess(inputExamples, inputLabels) {
-        const tokenizedInputs = inputExamples.map((input) =>
-            this.tokenizer.encodeText(input, this.inputSize)
-        );
-
-        const bertInputs = tokenizedInputs.map(
-            (tokenized, index) => {
-                const bertInput = {
-                    inputIds: tokenized.inputIds,
-                    inputMask: tokenized.inputMask,
-                    segmentIds: tokenized.segmentIds,
-                    labels: inputLabels?.[index],
-                };
-                return bertInput;
-            }
-        );
-
-        return bertInputs;
+        const Inputs = inputExamples.toString()
+        const tokenizedInputs = this.tokenizer.encode(Inputs);
+        const a=tokenizedInputs
+        const b=Array(tokenizedInputs.length).fill(0)
+        const c=Array(tokenizedInputs.length).fill(1)
+        const bertInput = {
+            inputIds: a,
+            segmentIds: b,
+            inputMask: c
+        };
+       
+        return bertInput;
     }
 
-    async train(inputs, batchSize = 32) {
+    async train(input, batchSize = 32) {
         console.log("Start training...");
-
+        const inputs= this.batchPreprocess(input);
         const bertOutput = await this.bertLayerInference(inputs);
         const x = tf.tensor2d(
             bertOutput,
-            [inputs.length, this.inputSize * this.inputSize],
+            [inputs.length, this.inputSize ],
             "int32"
         );
 
@@ -82,8 +82,8 @@ class BertModel {
     }
 
     async predict(inputText) {
-        const processedInput = this.preprocess(inputText);
-        const predictions = await this.batchPredict([processedInput]);
+        const processedInput = this.batchPreprocess(inputText);
+        const predictions = await this.batchPredict(processedInput);
         return predictions[0];
     }
 
@@ -91,36 +91,33 @@ class BertModel {
         const bertOutput = await this.bertLayerInference(inputs);
         const x = tf.tensor2d(
             bertOutput,
-            [inputs.length, this.inputSize * this.inputSize],
+            [1, this.inputSize],
             "int32"
         );
-
-        const predTensor = this.model.predict(x);
-        const predictions = await predTensor.array();
-        return predictions;
+        
+        return bertOutput;
     }
 
     // Get raw results from bert layer
     async bertLayerInference(inputs) {
-        const batchSize = inputs.length;
-        const inputIds = inputs.map((value) => value.inputIds);
-        const segmentIds = inputs.map((value) => value.segmentIds);
-        const inputMask = inputs.map((value) => value.inputMask);
-
+        const inputIds = inputs.inputIds;
+        const segmentIds = inputs.segmentIds;
+        const inputMask = inputs.inputMask;
+        console.log(inputs)
         const rawResult = tf.tidy(() => {
             const tfInputIds = tf.tensor2d(
                 inputIds,
-                [batchSize, this.inputSize],
+                [1, inputIds.length],
                 "int32"
             );
             const tfSegmentIds = tf.tensor2d(
                 segmentIds,
-                [batchSize, this.inputSize],
+                [1, segmentIds.length],
                 "int32"
             );
             const tfInputMask = tf.tensor2d(
                 inputMask,
-                [batchSize, this.inputSize],
+                [1, inputMask.length],
                 "int32"
             );
             return this.bertModel.execute({
@@ -130,8 +127,9 @@ class BertModel {
             });
         });
         const bertOutput = await rawResult.array();
+        console.log(rawResult)
         rawResult.dispose();
-
+        console.log(bertOutput)
         return bertOutput;
     }
 
@@ -140,7 +138,7 @@ class BertModel {
         const model = tf.sequential({
             layers: [
                 tf.layers.dense({
-                    inputShape: [this.inputSize * this.inputSize],
+                    inputShape: [this.inputSize],
                     units: 1,
                     activation: "sigmoid",
                 }),
@@ -172,7 +170,24 @@ class BertModel {
     async loadTokenizer() {
         try {
             console.log("Loading tokenizer...");
-            this.tokenizer = await loadTokenizer();
+            const tokenizerPath = "./tokenizer/tokenizer.json";
+            const specialTokensMapPath = "./tokenizer/special_tokens_map.json";
+            const tokenizerConfigPath = "./tokenizer/tokenizer_config.json";
+            const vocabPath = "./tokenizer/vocab.txt";
+
+            const rawTokenizerData = fs.readFileSync(tokenizerPath);
+            const tokenizerData = JSON.parse(rawTokenizerData);
+
+            const rawSpecialTokensMap = fs.readFileSync(specialTokensMapPath);
+            const specialTokensMap = JSON.parse(rawSpecialTokensMap);
+
+            const rawTokenizerConfig = fs.readFileSync(tokenizerConfigPath);
+            const tokenizerConfig = JSON.parse(rawTokenizerConfig);
+
+            const rawVocab = fs.readFileSync(vocabPath, "utf-8");
+            const vocab = rawVocab.split("\n");
+
+            this.tokenizer = new BertTokenizer(tokenizerData, specialTokensMap, tokenizerConfig, vocab);
             console.log("Tokenizer loaded");
         } catch (e) {
             console.error('Tokenizer yüklenirken hata: ', e);
@@ -183,11 +198,11 @@ class BertModel {
 
 
 class BertInput {
-    constructor(inputIds, inputMask, segmentIds, labels) {
-        this.inputIds = inputIds;
-        this.inputMask = inputMask;
-        this.segmentIds = segmentIds;
-        this.labels = labels;
+    constructor(inputIds, token_type_ids, attention_mask) {
+        this.input_ids = inputIds;
+        this.token_type_ids = token_type_ids;
+        this.attention_mask = attention_mask;
+        
     }
 }
 

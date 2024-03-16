@@ -1,4 +1,6 @@
 import * as tf from "@tensorflow/tfjs-node"
+import fs from 'fs';
+import util from 'util';
 
 /**
  * Source: https://github.com/tensorflow/tfjs-models/blob/master/qna/src/bert_tokenizer.ts
@@ -13,7 +15,7 @@ const SEP_INDEX = 102;
 const SEP_TOKEN = "[SEP]";
 const NFKC_TOKEN = "NFKC";
 
-const vocabUrl =`file://../models/vocab.json`;
+const readFile = util.promisify(fs.readFile);
 
 class TrieNode {
     constructor(key) {
@@ -143,8 +145,9 @@ class BertTokenizer {
     }
 
     async loadVocab() {
-        return tf.util.fetch(vocabUrl).then((d) => d.json());
-    }
+        const vocabpath="./bert/tokenizer/vocab.json"
+        const vocab = await readFile(vocabpath, "utf-8");
+        return JSON.parse(vocab);}
 
     processInput(text) {
         const charOriginalIndex = [];
@@ -279,7 +282,7 @@ class BertTokenizer {
     }
 }
 
-export default async function loadTokenizer() {
+export async function loadTokenizer() {
     const tokenizer = new BertTokenizer();
     await tokenizer.load();
     return tokenizer;
