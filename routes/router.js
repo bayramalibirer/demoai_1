@@ -16,8 +16,13 @@ async function trainModel(model) {
 }
 
 async function predictModel(predictInput,model) {
-    const result = await model.predict(predictInput);
-    return result;
+    try {
+        const result = await model.predict(predictInput);
+        return result;
+    } catch (error) {
+        console.error('Error during prediction:', error);
+        return null;
+    }
 }
 const model = await loadModel();
 
@@ -31,8 +36,10 @@ router.get('/users', (req, res, next) => {
     res.send('This is the secret content. Only logged in users can see that!');
 });
 
-router.post('/model', (req, res, next) => {
-    res.send(predictModel(req.body));//Predict metodundan döndürülen değer gönderilecek
+router.post('/model', async (req, res, next) => {
+    const predictInput = req.body.text.toString()
+    const prediction = await predictModel(predictInput, model);
+    res.send(prediction);
     
 });
 

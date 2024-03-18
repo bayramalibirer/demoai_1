@@ -94,7 +94,6 @@ class BertModel {
             [1, this.inputSize],
             "int32"
         );
-        
         return bertOutput;
     }
 
@@ -103,7 +102,6 @@ class BertModel {
         const inputIds = inputs.inputIds;
         const segmentIds = inputs.segmentIds;
         const inputMask = inputs.inputMask;
-        console.log(inputs)
         const rawResult = tf.tidy(() => {
             const tfInputIds = tf.tensor2d(
                 inputIds,
@@ -127,9 +125,7 @@ class BertModel {
             });
         });
         const bertOutput = await rawResult.array();
-        console.log(rawResult)
         rawResult.dispose();
-        console.log(bertOutput)
         return bertOutput;
     }
 
